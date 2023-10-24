@@ -1,0 +1,82 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  labels:
+    apps.tanzu.vmware.com/pipeline: test
+  name: developer-defined-tekton-pipeline
+  namespace: dev
+spec:
+  params:
+  - name: source-url
+    type: string
+  - name: source-revision
+    type: string
+  - name: sub-path
+    type: string
+    default: ""
+  tasks:
+  - name: pre
+    params:
+    - name: source-url
+      value: $(params.source-url)
+    - name: source-revision
+      value: $(params.source-revision)
+    - name: sub-path
+      value: $(params.sub-path)
+    taskSpec:
+      metadata: {}
+      params:
+      - name: source-url
+        type: string
+      - name: source-revision
+        type: string
+      - name: sub-path
+        type: string
+      steps:
+      - image: bash
+        name: pre-build
+        script: |
+          echo "Task: pre, Step: pre-pre"
+      - image: bash
+        name: test
+        script: |
+          echo "Task: task, Step: task-pre"
+      - image: bash
+        name: post-build
+        script: |
+          echo "Task: post, Step: post-pre"
+  - name: test
+    params:
+    - name: source-url
+      value: $(params.source-url)
+    - name: source-revision
+      value: $(params.source-revision)
+    - name: sub-path
+      value: $(params.sub-path)
+    taskSpec:
+      metadata: {}
+      params:
+      - name: source-url
+        type: string
+      - name: source-revision
+        type: string
+      - name: sub-path
+        type: string
+      steps:
+      - image: bash
+        name: pre-build
+        script: |
+          echo "Task: test, Step: pre-test"
+      - image: maven:3.8.6
+        name: test
+        script: |
+          echo "Task: test, Step: test"
+          cd `mktemp -d`
+          wget -qO- $(params.source-url) | tar xvz -m
+          mvn test --no-transfer-progress
+      - image: bash
+        name: post-build
+        script: |
+          echo "Task: test, Step: post-test"
+    runAfter:
+    - pre

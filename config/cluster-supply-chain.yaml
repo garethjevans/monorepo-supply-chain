@@ -68,15 +68,21 @@ spec:
       - name: gitImplementation
         value: #@ data.values.git_implementation
 
-  - name: source-tester
+  - name: commit-filter
     templateRef:
       kind: ClusterSourceTemplate
-      name: testing-pipeline
+      name: filter-template
     sources:
     - resource: source-provider
       name: source
 
-
+  - name: source-tester
+    templateRef:
+      kind: ClusterSourceTemplate
+      name: monorepo-testing-pipeline
+    sources:
+    - resource: commit-filter
+      name: source
           
   - name: image-provider
     templateRef:
@@ -96,8 +102,6 @@ spec:
       - name: docker_build_extra_args
         default: []
     sources:
-
-
       - resource: source-tester
         name: source
 
@@ -128,7 +132,7 @@ spec:
   - name: app-config
     templateRef:
       kind: ClusterConfigTemplate
-      name: monorepo
+      name: config-template
     configs:
       - resource: config-provider
         name: config

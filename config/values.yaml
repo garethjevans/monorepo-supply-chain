@@ -2,4 +2,4 @@
 ---
 registry:
   server: gcr.io
-  repository: my-repo
+  repository: ship-interfaces-dev

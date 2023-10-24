@@ -1,0 +1,76 @@
+apiVersion: carto.run/v1alpha1
+kind: ClusterSourceTemplate
+metadata:
+  annotations:
+  name: filter-template
+spec:
+  healthRule:
+    singleConditionType: Ready
+  lifecycle: mutable
+  revisionPath: .status.artifact.revision
+  urlPath: .status.artifact.url
+  ytt: |
+    #@ load("@ytt:data", "data")
+    #@ load("@ytt:yaml", "yaml")
+
+    #@ def merge_labels(fixed_values):
+    #@   labels = {}
+    #@   if hasattr(data.values.workload.metadata, "labels"):
+    #@     labels.update(data.values.workload.metadata.labels)
+    #@   end
+    #@   labels.update(fixed_values)
+    #@   return labels
+    #@ end
+
+    #@ def param(key):
+    #@   if not key in data.values.params:
+    #@     return None
+    #@   end
+    #@   return data.values.params[key]
+    #@ end
+
+    #@ def include():
+    #@   if hasattr(data.values.params, "monorepo_filtered_source"):
+    #@     return data.values.params.monorepo_filtered_source
+    #@   end
+    #@   if hasattr(data.values.workload.spec.source, "subPath"):
+    #@     return "\n".join([
+    #@         "!*",
+    #@         "/" + data.values.workload.spec.source.subPath,
+    #@         "!.*"]
+    #@     ) + "\n"
+    #@   end
+    #@   return "*\n"
+    #@ end
+
+    #@ if hasattr(data.values.workload.spec, "source"):
+    #@ if/end hasattr(data.values.workload.spec.source, "git"):
+    ---
+    apiVersion: source.garethjevans.org/v1alpha1
+    kind: FilteredRepository
+    metadata:
+      name: #@ data.values.workload.metadata.name
+      labels: #@ merge_labels({ "app.kubernetes.io/component": "source" })
+    spec:
+      sourceRef:
+        apiVersion: source.toolkit.fluxcd.io/v1beta1
+        kind: GitRepository
+        name: #@ data.values.workload.metadata.name
+      include: #@ include()
+    #@ end
+
+    #@ if hasattr(data.values.workload.spec, "source"):
+    #@ if/end hasattr(data.values.workload.spec.source, "image"):
+    ---
+    apiVersion: source.garethjevans.org/v1alpha1
+    kind: FilteredRepository
+    metadata:
+      name: #@ data.values.workload.metadata.name
+      labels: #@ merge_labels({ "app.kubernetes.io/component": "source" })
+    spec:
+      sourceRef:
+        apiVersion: source.apps.tanzu.vmware.com/v1alpha1
+        kind: ImageRepository
+        name: #@ data.values.workload.metadata.name
+      include: #@ include()
+    #@ end
